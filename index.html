@@ -109,6 +109,17 @@
     <button class="lien" data-retour>Annuler</button>
   </section>
 
+  <section id="e-geo" class="ecran">
+    <h1>📍 Encore une petite étape</h1>
+    <p class="date" style="margin-bottom:14px">Ton pointage n’est pas encore enregistré.</p>
+    <div class="jour" style="margin-top:0">
+      <p style="margin:0 0 10px;font-size:17px;line-height:1.45">Pour valider ton pointage, l’appli a besoin de ta position <b>au moment où tu appuies</b>. Elle ne sert qu’à ça : rien n’est suivi en dehors de tes pointages.</p>
+      <div id="geo-etapes" style="font-size:16px;line-height:1.5"></div>
+    </div>
+    <button class="gros arrivee" id="geo-reessayer" style="margin-top:16px;font-size:22px">J’ai activé, je réessaie</button>
+    <button class="lien" data-retour>Annuler</button>
+  </section>
+
   <section id="e-attente" class="ecran">
     <p class="attente" id="attente-txt">Enregistrement…</p>
   </section>
@@ -211,7 +222,7 @@
       if (!navigator.geolocation) return resolve({ lat: null, lng: null, prec: null, refus: true });
       navigator.geolocation.getCurrentPosition(
         p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, prec: p.coords.accuracy }),
-        () => resolve({ lat: null, lng: null, prec: null, refus: true }),
+        e => resolve({ lat: null, lng: null, prec: null, refus: true, code: e && e.code }),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     });
@@ -221,19 +232,53 @@
     ecran('e-attente');
     document.getElementById('attente-txt').textContent = 'Enregistrement…';
     const pos = await position();
+    if (pos.refus && !donnees.manuel) {
+      enAttente = [donnees, ecranErreur, msgErreur];
+      aideGeo(pos.code);
+      return;
+    }
     Object.assign(donnees, { lat: pos.lat, lng: pos.lng, prec: pos.prec });
     google.script.run
       .withSuccessHandler(r => {
         afficherJour(r.jour);
         ecran('e-main');
-        let t = r.message;
-        if (pos.refus) t += '. Active la localisation du téléphone pour les prochains pointages.';
-        message('msg', t, true);
+        message('msg', r.message, true);
         if (navigator.vibrate) navigator.vibrate(150);
       })
       .withFailureHandler(err => { ecran(ecranErreur); message(msgErreur, err.message, false); })
       .pointer(JETON, PIN, donnees);
   }
+
+  // Aide pour activer la localisation, adaptée au téléphone
+  let enAttente = null;
+  function aideGeo(code) {
+    const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    let html = '';
+    if (code === 2 || code === 3) {
+      html = '<p style="margin:0 0 8px"><b>Ton téléphone n’arrive pas à trouver ta position.</b></p>' +
+        '<ol style="margin:0;padding-left:20px"><li>Vérifie que la localisation (GPS) est bien allumée.</li>' +
+        '<li>Si tu es dans un bâtiment, avance près d’une porte ou dehors quelques secondes.</li>' +
+        '<li>Puis touche « Je réessaie ».</li></ol>';
+    } else if (ios) {
+      html = '<p style="margin:0 0 8px"><b>Sur ton iPhone :</b></p><ol style="margin:0;padding-left:20px">' +
+        '<li>Ouvre <b>Réglages</b>, puis <b>Confidentialité et sécurité</b>.</li>' +
+        '<li>Touche <b>Service de localisation</b> et vérifie qu’il est activé.</li>' +
+        '<li>Descends jusqu’à <b>Sites web Safari</b> : choisis <b>« Lorsque l’app est active »</b> et active <b>« Position exacte »</b>.</li>' +
+        '<li>Reviens ici et touche « Je réessaie ». Si le téléphone te demande, réponds <b>« Autoriser »</b>.</li></ol>';
+    } else {
+      html = '<p style="margin:0 0 8px"><b>Sur ton téléphone Android :</b></p><ol style="margin:0;padding-left:20px">' +
+        '<li>Fais glisser le haut de l’écran vers le bas et vérifie que <b>Localisation</b> est activée.</li>' +
+        '<li>Dans Chrome, touche le <b>cadenas</b> ou les <b>trois points</b>, puis <b>Autorisations</b> ou <b>Infos sur le site</b>, et mets <b>Position</b> sur <b>« Autoriser »</b>.</li>' +
+        '<li>Pour une position précise : Paramètres du téléphone, Applications, Chrome, Autorisations, Position, active <b>« Utiliser la position exacte »</b>.</li>' +
+        '<li>Reviens ici et touche « Je réessaie ».</li></ol>';
+    }
+    document.getElementById('geo-etapes').innerHTML = html;
+    ecran('e-geo');
+  }
+  document.getElementById('geo-reessayer').onclick = () => {
+    if (enAttente) { const a = enAttente; enAttente = null; envoyer(a[0], a[1], a[2]); }
+    else ecran('e-main');
+  };
 
   document.querySelectorAll('[data-type]').forEach(b => {
     b.onclick = () => envoyer({ type: b.dataset.type }, 'e-main', 'msg');
