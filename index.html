@@ -52,6 +52,10 @@
   .msg { border-radius: 14px; padding: 18px; font-size: 20px; font-weight: 600; margin-bottom: 16px; display: none; }
   .msg.ok { display: block; background: #DCEBDD; color: #1D4A2A; }
   .msg.err { display: block; background: #F4DCD7; color: #7A2617; }
+  .etape { display: flex; gap: 12px; background: var(--carte); border-radius: 14px; padding: 12px 14px; margin-top: 8px; font-size: 16px; line-height: 1.45; }
+  .etape b.n { flex: 0 0 30px; height: 30px; border-radius: 15px; background: var(--arrivee); color: #fff; text-align: center; line-height: 30px; font-size: 16px; }
+  .alerte-exacte { background: #F7EEDC; border-radius: 14px; padding: 12px 14px; margin-top: 10px; font-size: 16px; line-height: 1.45; }
+  .touche.actif { border-color: var(--arrivee); background: #DCEBDD; }
   .attente { text-align: center; font-size: 20px; padding: 40px 0; }
   button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #1F5FAD; outline-offset: 2px; }
 </style>
@@ -111,11 +115,16 @@
 
   <section id="e-geo" class="ecran">
     <h1>📍 Encore une petite étape</h1>
-    <p class="date" style="margin-bottom:14px">Ton pointage n’est pas encore enregistré.</p>
+    <p class="date" style="margin-bottom:12px">Ton pointage n’est pas encore enregistré.</p>
     <div class="jour" style="margin-top:0">
-      <p style="margin:0 0 10px;font-size:17px;line-height:1.45">Pour valider ton pointage, l’appli a besoin de ta position <b>au moment où tu appuies</b>. Elle ne sert qu’à ça : rien n’est suivi en dehors de tes pointages.</p>
-      <div id="geo-etapes" style="font-size:16px;line-height:1.5"></div>
+      <p id="geo-raison" style="margin:0;font-size:17px;line-height:1.45"></p>
     </div>
+    <p style="font-size:17px;font-weight:600;margin:18px 0 8px">Quel téléphone as-tu ?</p>
+    <div class="duo">
+      <button class="touche" id="geo-ios">📱 iPhone</button>
+      <button class="touche" id="geo-android">🤖 Android</button>
+    </div>
+    <div id="geo-etapes"></div>
     <button class="gros arrivee" id="geo-reessayer" style="margin-top:16px;font-size:22px">J’ai activé, je réessaie</button>
     <button class="lien" data-retour>Annuler</button>
   </section>
@@ -232,9 +241,9 @@
     ecran('e-attente');
     document.getElementById('attente-txt').textContent = 'Enregistrement…';
     const pos = await position();
-    if (pos.refus && !donnees.manuel) {
+    if (!donnees.manuel && (pos.refus || pos.prec > 1000)) {
       enAttente = [donnees, ecranErreur, msgErreur];
-      aideGeo(pos.code);
+      aideGeo(pos.refus ? pos.code : 'flou');
       return;
     }
     Object.assign(donnees, { lat: pos.lat, lng: pos.lng, prec: pos.prec });
@@ -249,32 +258,42 @@
       .pointer(JETON, PIN, donnees);
   }
 
-  // Aide pour activer la localisation, adaptée au téléphone
+  // Aide pour activer la position exacte, pas à pas selon le téléphone
   let enAttente = null;
+  const ETAPES = {
+    ios: [
+      'Ouvre <b>Réglages</b> ⚙️, puis <b>Confidentialité et sécurité</b>, puis <b>Service de localisation</b> : il doit être <b>activé</b>.',
+      'Descends jusqu’à <b>Sites web Safari</b> et choisis <b>« Lorsque l’app est active »</b>.',
+      'Juste en dessous, active <b>« Position exacte »</b> : le bouton doit être <b>vert</b>.',
+      'Reviens ici et touche <b>« J’ai activé, je réessaie »</b>. Si une fenêtre s’ouvre, touche <b>« Autoriser »</b> en laissant <b>« Précise »</b> activé.'
+    ],
+    android: [
+      'Fais glisser le haut de l’écran vers le bas : <b>Localisation</b> doit être <b>activée</b>.',
+      'Ouvre <b>Paramètres</b> ⚙️, <b>Applications</b>, <b>Chrome</b>, <b>Autorisations</b>, <b>Position</b> : choisis <b>« Autoriser seulement si l’appli est en cours d’utilisation »</b> et active <b>« Utiliser la position exacte »</b>.',
+      'Reviens ici. Si Chrome te le demande, touche le <b>cadenas</b> à gauche de l’adresse, puis <b>Autorisations</b> et mets <b>Position</b> sur <b>« Autoriser »</b>.',
+      'Touche <b>« J’ai activé, je réessaie »</b>. Si une fenêtre s’ouvre, choisis <b>« Précise »</b>, puis <b>« Lorsque vous utilisez l’appli »</b>.'
+    ]
+  };
+  function montrerEtapes(tel) {
+    document.getElementById('geo-ios').classList.toggle('actif', tel === 'ios');
+    document.getElementById('geo-android').classList.toggle('actif', tel === 'android');
+    document.getElementById('geo-etapes').innerHTML =
+      ETAPES[tel].map((t, i) => '<div class="etape"><b class="n">' + (i + 1) + '</b><span>' + t + '</span></div>').join('') +
+      '<div class="alerte-exacte">⚠️ <b>Choisis bien la position exacte (précise)</b>, pas la position approximative : sans elle, ton pointage ne peut pas être validé.</div>';
+  }
   function aideGeo(code) {
-    const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    let html = '';
-    if (code === 2 || code === 3) {
-      html = '<p style="margin:0 0 8px"><b>Ton téléphone n’arrive pas à trouver ta position.</b></p>' +
-        '<ol style="margin:0;padding-left:20px"><li>Vérifie que la localisation (GPS) est bien allumée.</li>' +
-        '<li>Si tu es dans un bâtiment, avance près d’une porte ou dehors quelques secondes.</li>' +
-        '<li>Puis touche « Je réessaie ».</li></ol>';
-    } else if (ios) {
-      html = '<p style="margin:0 0 8px"><b>Sur ton iPhone :</b></p><ol style="margin:0;padding-left:20px">' +
-        '<li>Ouvre <b>Réglages</b>, puis <b>Confidentialité et sécurité</b>.</li>' +
-        '<li>Touche <b>Service de localisation</b> et vérifie qu’il est activé.</li>' +
-        '<li>Descends jusqu’à <b>Sites web Safari</b> : choisis <b>« Lorsque l’app est active »</b> et active <b>« Position exacte »</b>.</li>' +
-        '<li>Reviens ici et touche « Je réessaie ». Si le téléphone te demande, réponds <b>« Autoriser »</b>.</li></ol>';
-    } else {
-      html = '<p style="margin:0 0 8px"><b>Sur ton téléphone Android :</b></p><ol style="margin:0;padding-left:20px">' +
-        '<li>Fais glisser le haut de l’écran vers le bas et vérifie que <b>Localisation</b> est activée.</li>' +
-        '<li>Dans Chrome, touche le <b>cadenas</b> ou les <b>trois points</b>, puis <b>Autorisations</b> ou <b>Infos sur le site</b>, et mets <b>Position</b> sur <b>« Autoriser »</b>.</li>' +
-        '<li>Pour une position précise : Paramètres du téléphone, Applications, Chrome, Autorisations, Position, active <b>« Utiliser la position exacte »</b>.</li>' +
-        '<li>Reviens ici et touche « Je réessaie ».</li></ol>';
-    }
-    document.getElementById('geo-etapes').innerHTML = html;
+    let raison;
+    if (code === 'flou') raison = 'Ton téléphone donne seulement une <b>position approximative</b>. Pour valider ton pointage, active la <b>position exacte</b>. Elle ne sert qu’au moment où tu appuies : rien n’est suivi en dehors de tes pointages.';
+    else if (code === 2 || code === 3) raison = 'Ton téléphone <b>n’arrive pas à trouver ta position</b>. Vérifie que la localisation est bien allumée. Si tu es dans un bâtiment, avance près d’une porte ou sors quelques secondes, puis réessaie.';
+    else raison = 'Pour valider ton pointage, l’appli a besoin de ta <b>position exacte</b> au moment où tu appuies. Elle ne sert qu’à ça : rien n’est suivi en dehors de tes pointages.';
+    document.getElementById('geo-raison').innerHTML = raison;
+    document.getElementById('geo-etapes').innerHTML = '';
+    document.getElementById('geo-ios').classList.remove('actif');
+    document.getElementById('geo-android').classList.remove('actif');
     ecran('e-geo');
   }
+  document.getElementById('geo-ios').onclick = () => montrerEtapes('ios');
+  document.getElementById('geo-android').onclick = () => montrerEtapes('android');
   document.getElementById('geo-reessayer').onclick = () => {
     if (enAttente) { const a = enAttente; enAttente = null; envoyer(a[0], a[1], a[2]); }
     else ecran('e-main');
