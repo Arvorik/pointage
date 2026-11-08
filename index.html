@@ -33,6 +33,9 @@
   .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .duo .gros { font-size: 22px; padding: 26px 8px; }
   .pause2 { background: #8A6220; }
+  .pause-ligne { background: var(--carte); border-radius: 18px; padding: 10px 10px 0; margin-bottom: 12px; }
+  .pl-titre { font-size: 16px; font-weight: 600; color: var(--doux); margin: 0 4px 8px; }
+  .pause-ligne .gros { font-size: 20px; padding: 16px 8px; margin-bottom: 10px; }
   .lien { background: none; border: 0; color: var(--texte); text-decoration: underline;
     font-size: 17px; padding: 14px 0; width: 100%; cursor: pointer; }
   .jour { background: var(--carte); border-radius: 14px; padding: 14px 16px; margin-top: 10px; }
@@ -77,10 +80,18 @@
     <div class="date" id="date"></div>
     <div class="msg" id="msg"></div>
     <button class="gros arrivee" data-type="Arrivée">Arrivée</button>
-    <div class="duo">
-      <button class="gros pause" data-type="Début de pause">Début de pause</button>
-      <button class="gros pause2" data-type="Fin de pause">Fin de pause</button>
-    </div>
+    <div class="pause-ligne"><div class="pl-titre">☕ Pause du matin</div><div class="duo">
+      <button class="gros pause" data-type="Début pause matin">Début</button>
+      <button class="gros pause2" data-type="Fin pause matin">Fin</button>
+    </div></div>
+    <div class="pause-ligne"><div class="pl-titre">🍽️ Pause de midi</div><div class="duo">
+      <button class="gros pause" data-type="Début pause midi">Début</button>
+      <button class="gros pause2" data-type="Fin pause midi">Fin</button>
+    </div></div>
+    <div class="pause-ligne"><div class="pl-titre">☕ Pause de l’après-midi</div><div class="duo">
+      <button class="gros pause" data-type="Début pause après-midi">Début</button>
+      <button class="gros pause2" data-type="Fin pause après-midi">Fin</button>
+    </div></div>
     <button class="gros depart" data-type="Départ">Départ</button>
     <div class="jour"><h2>Aujourd’hui</h2><ul id="liste"><li>Rien de pointé pour l’instant</li></ul></div>
     <button class="lien" id="b-oubli">J’ai oublié de pointer</button>
@@ -96,7 +107,7 @@
     <h1>J’ai oublié de pointer</h1>
     <label for="o-type">Ce que j’ai oublié</label>
     <select id="o-type">
-      <option>Arrivée</option><option>Début de pause</option><option>Fin de pause</option><option>Départ</option>
+      <option>Arrivée</option><option>Début pause matin</option><option>Fin pause matin</option><option>Début pause midi</option><option>Fin pause midi</option><option>Début pause après-midi</option><option>Fin pause après-midi</option><option>Départ</option>
     </select>
     <label for="o-date">Date</label>
     <input type="date" id="o-date">
