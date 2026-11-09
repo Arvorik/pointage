@@ -33,6 +33,8 @@
   .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .duo .gros { font-size: 22px; padding: 26px 8px; }
   .pause2 { background: #8A6220; }
+  .arrivee, .depart { font-size: 23px; line-height: 1.25; }
+  .nuit { background: #4B3F8C; } .nuit2 { background: #2F2860; }
   .pause-ligne { background: var(--carte); border-radius: 18px; padding: 10px 10px 0; margin-bottom: 12px; }
   .pl-titre { font-size: 16px; font-weight: 600; color: var(--doux); margin: 0 4px 8px; }
   .pause-ligne .gros { font-size: 20px; padding: 16px 8px; margin-bottom: 10px; }
@@ -79,20 +81,24 @@
     <div class="horloge" id="horloge">--:--</div>
     <div class="date" id="date"></div>
     <div class="msg" id="msg"></div>
-    <button class="gros arrivee" data-type="Arrivée">Arrivée</button>
+    <button class="gros arrivee" data-type="Arrivée">🐄 C’est parti, les vaches m’attendent !</button>
     <div class="pause-ligne"><div class="pl-titre">☕ Pause du matin</div><div class="duo">
-      <button class="gros pause" data-type="Début pause matin">Début</button>
-      <button class="gros pause2" data-type="Fin pause matin">Fin</button>
+      <button class="gros pause" data-type="Début pause matin">☕ Pause café</button>
+      <button class="gros pause2" data-type="Fin pause matin">💪 Au boulot !</button>
     </div></div>
     <div class="pause-ligne"><div class="pl-titre">🍽️ Pause de midi</div><div class="duo">
-      <button class="gros pause" data-type="Début pause midi">Début</button>
-      <button class="gros pause2" data-type="Fin pause midi">Fin</button>
+      <button class="gros pause" data-type="Début pause midi">🍽️ À la soupe !</button>
+      <button class="gros pause2" data-type="Fin pause midi">🚜 On repart !</button>
     </div></div>
     <div class="pause-ligne"><div class="pl-titre">☕ Pause de l’après-midi</div><div class="duo">
-      <button class="gros pause" data-type="Début pause après-midi">Début</button>
-      <button class="gros pause2" data-type="Fin pause après-midi">Fin</button>
+      <button class="gros pause" data-type="Début pause après-midi">🥐 Petite pause</button>
+      <button class="gros pause2" data-type="Fin pause après-midi">⚡ Dernière ligne droite</button>
     </div></div>
-    <button class="gros depart" data-type="Départ">Départ</button>
+    <button class="gros depart" data-type="Départ">🏠 À demain la team !</button>
+    <div class="pause-ligne" id="bloc-nuit" style="display:none"><div class="pl-titre">🌙 Alarme robot de nuit</div><div class="duo">
+      <button class="gros nuit" data-type="Début alarme nuit">🚨 Le robot m’appelle</button>
+      <button class="gros nuit2" data-type="Fin alarme nuit">😴 Retour au lit</button>
+    </div></div>
     <div class="jour"><h2>Aujourd’hui</h2><ul id="liste"><li>Rien de pointé pour l’instant</li></ul></div>
     <button class="lien" id="b-oubli">J’ai oublié de pointer</button>
   </section>
@@ -217,7 +223,7 @@
     document.getElementById('attente-txt').textContent = 'Connexion…';
     google.script.run
       .withSuccessHandler(r => { PIN = p; garderPin(p); afficherJour(r.jour);
-        document.getElementById('bonjour').textContent = 'Bonjour ' + r.nom; ecran('e-main'); })
+        document.getElementById('bonjour').textContent = 'Salut ' + r.nom + ' 👋'; nuitActive(r.nuit); ecran('e-main'); })
       .withFailureHandler(err => { oublierPin(); saisie = '';
         document.getElementById('pin-points').textContent = '';
         ecran('e-pin');
@@ -262,11 +268,37 @@
       .withSuccessHandler(r => {
         afficherJour(r.jour);
         ecran('e-main');
-        message('msg', r.message, true);
+        message('msg', donnees.manuel ? r.message : drole(donnees.type) + ' — ' + r.message, true);
         if (navigator.vibrate) navigator.vibrate(150);
       })
       .withFailureHandler(err => { ecran(ecranErreur); message(msgErreur, err.message, false); })
       .pointer(JETON, PIN, donnees);
+  }
+
+  // Petits messages rigolos après chaque pointage
+  const DROLES = {
+    arrivee: ['Bonne journée chef 👍', 'Les vaches t’attendaient 🐮', 'C’est parti mon kiki 🚀', 'Au top dès le matin ☀️'],
+    debut: ['Bonne pause, tu l’as méritée ☕', 'Profite, les vaches gèrent 🐄', 'Recharge les batteries 🔋'],
+    fin: ['Allez, on y retourne 💪', 'Les vaches sont contentes de te revoir 🐮', 'Au taquet ⚡'],
+    depart: ['Bonne soirée, repose-toi bien 🏡', 'Merci pour ta journée 🙌', 'À demain, les vaches comptent sur toi 🐄'],
+    nuitDebut: ['Courage, le robot compte sur toi 🤖', 'Super-héros de la nuit 🦸'],
+    nuitFin: ['Bonne nuit, dors bien 😴', 'Merci, retour au lit 🛏️']
+  };
+  function drole(type) {
+    const k = type === 'Arrivée' ? 'arrivee' : type === 'Départ' ? 'depart' : type === 'Début alarme nuit' ? 'nuitDebut' :
+      type === 'Fin alarme nuit' ? 'nuitFin' : /^Début/.test(type) ? 'debut' : 'fin';
+    const l = DROLES[k];
+    return l[Math.floor(Math.random() * l.length)];
+  }
+  // Boutons d'alarme de nuit, seulement pour les salariés concernés
+  function nuitActive(oui) {
+    document.getElementById('bloc-nuit').style.display = oui ? 'block' : 'none';
+    const sel = document.getElementById('o-type');
+    ['Début alarme nuit', 'Fin alarme nuit'].forEach(t => {
+      const o = Array.from(sel.options).find(x => x.value === t);
+      if (oui && !o) { const n = document.createElement('option'); n.textContent = t; sel.insertBefore(n, sel.lastElementChild); }
+      if (!oui && o) o.remove();
+    });
   }
 
   // Aide pour activer la position exacte, pas à pas selon le téléphone
