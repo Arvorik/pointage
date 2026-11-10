@@ -7,7 +7,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pointage">
 <meta name="theme-color" content="#2E6B3F">
-<link rel="manifest" href="manifest.json">
 <style>
   :root {
     --fond: #EEF1EC; --texte: #17221B; --doux: #5B675F; --carte: #FFFFFF;
@@ -142,6 +141,13 @@
       <button class="touche" id="geo-android">🤖 Android</button>
     </div>
     <div id="geo-etapes"></div>
+    <div id="geo-encore" class="alerte-exacte" style="display:none;background:#F4DCD7">
+      <b>😕 Toujours pas de position.</b> Le téléphone ne prend parfois le réglage en compte qu’après avoir fermé l’appli.
+      <ol style="margin:6px 0 0;padding-left:20px"><li>Ferme complètement ton navigateur : balaye-le vers le haut dans la liste des applis ouvertes.</li>
+      <li>Rouvre l’appli de pointage et réessaie.</li>
+      <li>Sur iPhone, si ça bloque encore, ouvre ton lien avec <b>Safari</b> plutôt que Chrome.</li></ol>
+      <button class="gros depart" id="geo-recharger" style="margin:10px 0 0;font-size:18px;padding:14px">🔄 Recharger l’appli</button>
+    </div>
     <button class="gros arrivee" id="geo-reessayer" style="margin-top:16px;font-size:22px">J’ai activé, je réessaie</button>
     <button class="lien" data-retour>Annuler</button>
   </section>
@@ -174,6 +180,7 @@
     if (JETON) localStorage.setItem('jeton', JETON);
     else { const j = localStorage.getItem('jeton'); if (j) location.replace('?t=' + j); }
   } catch (e) {}
+  if (!JETON) setTimeout(() => message('pin-msg', 'Lien incomplet 😕 Ouvre ton lien personnel reçu par message, puis recrée l’icône depuis ce lien.', false), 0);
   const CLE = 'pin_' + JETON;
   let PIN = '';
   let saisie = '';
@@ -267,6 +274,7 @@
     google.script.run
       .withSuccessHandler(r => {
         afficherJour(r.jour);
+        essais = 0;
         ecran('e-main');
         message('msg', donnees.manuel ? r.message : drole(donnees.type) + ' — ' + r.message, true);
         if (navigator.vibrate) navigator.vibrate(150);
@@ -302,13 +310,20 @@
   }
 
   // Aide pour activer la position exacte, pas à pas selon le téléphone
-  let enAttente = null;
+  let enAttente = null, essais = 0;
   const ETAPES = {
     ios: [
       'Ouvre <b>Réglages</b> ⚙️, puis <b>Confidentialité et sécurité</b>, puis <b>Service de localisation</b> : il doit être <b>activé</b>.',
       'Descends jusqu’à <b>Sites web Safari</b> et choisis <b>« Lorsque l’app est active »</b>.',
       'Juste en dessous, active <b>« Position exacte »</b> : le bouton doit être <b>vert</b>.',
       'Reviens ici et touche <b>« J’ai activé, je réessaie »</b>. Si une fenêtre s’ouvre, touche <b>« Autoriser »</b> en laissant <b>« Précise »</b> activé.'
+    ],
+    iosChrome: [
+      'Ouvre <b>Réglages</b> ⚙️ (l’appli grise de l’iPhone), descends et touche <b>Chrome</b>.',
+      'Touche <b>Position</b> et choisis <b>« Lorsque l’app est active »</b>.',
+      'Juste en dessous, active <b>« Position exacte »</b> : le bouton doit être <b>vert</b>.',
+      'Vérifie aussi dans Réglages, <b>Confidentialité et sécurité</b>, que <b>Service de localisation</b> est activé.',
+      'Reviens ici et touche <b>« J’ai activé, je réessaie »</b>. Si Chrome demande, touche <b>« Autoriser »</b>.'
     ],
     android: [
       'Fais glisser le haut de l’écran vers le bas : <b>Localisation</b> doit être <b>activée</b>.',
@@ -319,6 +334,7 @@
   };
   function montrerEtapes(tel) {
     document.getElementById('geo-ios').classList.toggle('actif', tel === 'ios');
+    if (tel === 'ios' && /CriOS/i.test(navigator.userAgent)) tel = 'iosChrome';
     document.getElementById('geo-android').classList.toggle('actif', tel === 'android');
     document.getElementById('geo-etapes').innerHTML =
       ETAPES[tel].map((t, i) => '<div class="etape"><b class="n">' + (i + 1) + '</b><span>' + t + '</span></div>').join('') +
@@ -330,14 +346,18 @@
     else if (code === 2 || code === 3) raison = 'Ton téléphone <b>n’arrive pas à trouver ta position</b>. Vérifie que la localisation est bien allumée. Si tu es dans un bâtiment, avance près d’une porte ou sors quelques secondes, puis réessaie.';
     else raison = 'Pour valider ton pointage, l’appli a besoin de ta <b>position exacte</b> au moment où tu appuies. Elle ne sert qu’à ça : rien n’est suivi en dehors de tes pointages.';
     document.getElementById('geo-raison').innerHTML = raison;
+    document.getElementById('geo-encore').style.display = essais > 0 ? 'block' : 'none';
+    if (essais > 0 && navigator.vibrate) navigator.vibrate([80, 60, 80]);
     document.getElementById('geo-etapes').innerHTML = '';
     document.getElementById('geo-ios').classList.remove('actif');
     document.getElementById('geo-android').classList.remove('actif');
     ecran('e-geo');
   }
+  document.getElementById('geo-recharger').onclick = () => location.reload();
   document.getElementById('geo-ios').onclick = () => montrerEtapes('ios');
   document.getElementById('geo-android').onclick = () => montrerEtapes('android');
   document.getElementById('geo-reessayer').onclick = () => {
+    essais++;
     if (enAttente) { const a = enAttente; enAttente = null; envoyer(a[0], a[1], a[2]); }
     else ecran('e-main');
   };
