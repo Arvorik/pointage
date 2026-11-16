@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tableau de bord Arvorik</title>
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+
+  :root {
+    --fond: #F3F4F1; --texte: #17221B; --doux: #5B675F; --carte: #FFFFFF; --ligne: #DADFD8;
+    --vert: #2E6B3F; --orange: #C77A12; --rouge: #B3321F; --accent: #3B4E63;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fond); color: var(--texte);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 15px; }
+  main { max-width: 1240px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; margin: 4px 0 14px; }
+  h2 { font-size: 17px; margin: 22px 0 10px; }
+  .onglets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .onglets button { border: 2px solid var(--ligne); background: var(--carte); border-radius: 10px;
+    padding: 9px 14px; font-size: 15px; cursor: pointer; color: var(--texte); }
+  .onglets button.actif { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .vue { display: none; }
+  .vue.actif { display: block; }
+  .barre { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  select, input, button.act { font-size: 15px; padding: 8px 10px; border-radius: 9px; border: 2px solid var(--ligne);
+    background: var(--carte); color: var(--texte); font-family: inherit; }
+  button.act { cursor: pointer; border-color: var(--accent); }
+  .tableau { overflow-x: auto; background: var(--carte); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--ligne); vertical-align: top; }
+  th { font-weight: 600; color: var(--doux); font-size: 13px; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .pastille { display: inline-block; padding: 2px 9px; border-radius: 99px; color: #fff; font-size: 13px; font-weight: 600; }
+  .Vert { background: var(--vert); } .Orange { background: var(--orange); } .Rouge { background: var(--rouge); }
+  .alerte { color: var(--rouge); font-weight: 600; }
+  .vide { padding: 18px; color: var(--doux); }
+  .petit { color: var(--doux); font-size: 13px; }
+  #login { max-width: 320px; margin: 60px auto; }
+  #login input { width: 100%; font-size: 26px; text-align: center; letter-spacing: 8px; }
+  #login button { width: 100%; margin-top: 12px; padding: 14px; font-size: 18px; background: var(--accent); color: #fff; border: 0; border-radius: 10px; }
+  .err { color: var(--rouge); margin-top: 10px; }
+  a { color: var(--accent); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid #1F5FAD; outline-offset: 2px; }
+  .acc-tete { display: flex; justify-content: space-between; align-items: flex-end; margin: 6px 0 14px; }
+  .acc-date { color: var(--doux); font-size: 14px; text-transform: capitalize; }
+  .acc-heure { font-size: 34px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+  .kpi { border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+  .kpi b { font-size: 28px; line-height: 1.1; } .kpi span { font-size: 13px; } .kpi .kpi-em { font-size: 18px; }
+  .k-vert { background: #DCEBDD; color: #1D4A2A; } .k-paille { background: #F6EBD6; color: #6B4A12; }
+  .k-ardoise { background: #DDE3EA; color: #26364A; } .k-gris { background: #ECEEEA; color: #5B675F; } .k-rouge { background: #F4DCD7; color: #7A2617; }
+  .cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
+  .acc-sous { font-size: 15px; margin: 18px 0 8px; color: var(--doux); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 8px; background: var(--carte); border-radius: 99px; padding: 5px 14px 5px 5px; font-size: 14px; }
+  .chip .avatar { width: 28px; height: 28px; flex: 0 0 28px; font-size: 13px; } .chip span { color: var(--doux); font-size: 12px; }
+  .carte { background: var(--carte); border-radius: 16px; padding: 14px 16px; border-top: 5px solid #2E6B3F; }
+  .carte.pause { border-top-color: #B7832F; } .carte.parti { border-top-color: #3B4E63; }
+  .carte.absent { border-top-color: #C9CEC7; opacity: .8; padding: 10px 16px; }
+  .c-tete { display: flex; align-items: center; gap: 12px; } .c-nom { flex: 1; } .c-nom b { font-size: 17px; }
+  .avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 18px; flex: 0 0 42px; }
+  .a-present { background: #2E6B3F; } .a-pause { background: #B7832F; } .a-parti { background: #3B4E63; } .a-absent { background: #B4BCB3; }
+  .etat { font-size: 13px; font-weight: 600; } .etat span { font-weight: 400; color: var(--doux); }
+  .e-present { color: #2E6B3F; } .e-pause { color: #8A6220; } .e-parti { color: #3B4E63; } .e-absent { color: #7A857E; }
+  .c-total { text-align: right; } .c-total b { display: block; font-size: 22px; } .c-total span { font-size: 11px; color: var(--doux); }
+  .frise { position: relative; height: 14px; background: #EEF1EC; border-radius: 7px; margin: 14px 0 2px; overflow: hidden; }
+  .bloc { position: absolute; top: 0; bottom: 0; border-radius: 7px; }
+  .b-travail { background: #7FB38E; } .b-pause { background: #E2B45C; top: 2px; bottom: 2px; }
+  .bloc.live { animation: pulse 2s infinite; } @keyframes pulse { 50% { opacity: .55; } }
+  .maintenant { position: absolute; top: 0; bottom: 0; width: 2px; background: #B3321F; }
+  .graduation { position: relative; height: 14px; font-size: 10px; color: var(--doux); margin-bottom: 8px; }
+  .graduation span { position: absolute; transform: translateX(-50%); }
+  .ligne { display: grid; grid-template-columns: 1.3fr 1fr auto; gap: 8px; font-size: 13.5px; padding: 5px 0; border-top: 1px solid var(--ligne); align-items: center; }
+  .ligne .lieu { font-size: 12px; text-align: right; } .ligne .dur { color: var(--doux); text-align: right; }
+  .ligne.en-cours { color: #8A6220; }
+  .ligne-pos { grid-column: 1 / -1; font-size: 11.5px; color: var(--doux); margin-top: -2px; }
+  .ligne-pos .pastille { font-size: 10px; padding: 1px 6px; }
+  .avert { margin-top: 8px; font-size: 12px; background: #FBF3E4; border-radius: 8px; padding: 6px 8px; color: #6B4A12; }
+  @media (max-width: 640px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+  @media print {
+    .onglets, .barre, h1, .noprint { display: none !important; }
+    body { background: #fff; } main { padding: 0; } .tableau { border-radius: 0; }
+  }
+
+  .kpis { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .nav-jour { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .nav-jour button { font-size: 16px; padding: 7px 12px; border-radius: 9px; border: 2px solid var(--ligne); background: var(--carte); cursor: pointer; color: var(--texte); }
+  .nav-jour button.auj { border-color: var(--accent); }
+  .nav-jour input { padding: 6px 8px; }
+  .bandeau { border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
+  .b-rouge { background: #F4DCD7; color: #7A2617; } .b-info { background: #E6EDF4; color: #26364A; }
+  .carte.oubli { border-top-color: #B3321F; } .a-oubli { background: #B3321F; } .e-oubli { color: #B3321F; }
+  .chip.rouge { background: #F4DCD7; } .chip.conge { background: #E6EDF4; }
+  .oublis { font-size: 12px; margin-top: 8px; color: var(--doux); } .oublis.trop { color: var(--rouge); font-weight: 600; }
+  details.evts { margin-top: 8px; font-size: 13px; } details.evts summary { cursor: pointer; color: var(--accent); }
+  .evt { display: flex; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px dashed var(--ligne); flex-wrap: wrap; }
+  .evt .t { flex: 1; min-width: 140px; } .evt.annule .t { text-decoration: line-through; color: var(--doux); }
+  .mini { font-size: 12px; padding: 4px 8px; border-radius: 7px; border: 1px solid var(--ligne); background: #fff; cursor: pointer; color: var(--texte); }
+  .mini.danger { color: var(--rouge); border-color: #E7B9B0; } .mini.danger.sur { background: var(--rouge); color: #fff; }
+  .c-actions { display: flex; gap: 6px; margin-top: 8px; }
+  #carte { height: 400px; border-radius: 14px; margin-top: 8px; z-index: 0; }
+  .sem td, .sem th { text-align: center; white-space: nowrap; } .sem td:first-child, .sem th:first-child { text-align: left; }
+  .sem td.clic { cursor: pointer; } .sem td.clic:hover { background: #F0F3EE; }
+  .sem .auj { background: #F3F7EF; } .sem .plan { font-size: 12px; color: #26364A; } .sem .manq { color: var(--rouge); font-size: 12px; }
+  .jour-h { background: var(--carte); border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; }
+  .jour-h .tt { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; text-transform: capitalize; }
+  .resume { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .fond { position: fixed; inset: 0; background: rgba(23,34,27,.45); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+  .fond.ouvert { display: flex; }
+  .modal { background: var(--carte); border-radius: 16px; padding: 18px; width: 100%; max-width: 420px; max-height: 92vh; overflow: auto; }
+  .modal h2 { margin-top: 0; } .modal label { display: block; font-size: 13px; color: var(--doux); margin: 10px 0 4px; }
+  .modal select, .modal input[type=date], .modal input[type=time], .modal input[type=text] { width: 100%; }
+  .modal .coche { display: flex; gap: 8px; align-items: flex-start; color: var(--texte); font-size: 14px; }
+  .modal .coche input { width: auto; margin-top: 3px; }
+  .modal .boutons { display: flex; gap: 8px; margin-top: 16px; } .modal .boutons button { flex: 1; padding: 11px; font-size: 15px; border-radius: 10px; cursor: pointer; }
+  .b-ok { background: var(--accent); color: #fff; border: 0; } .b-non { background: #fff; border: 2px solid var(--ligne); color: var(--texte); }
+  #ajout-global { background: #2E6B3F; color: #fff; border-color: #2E6B3F; }
+</style>
+</head>
+<body>
+<main>
+  <div id="login">
+    <h1>Tableau de bord pointage</h1>
+    <input type="password" id="pin" inputmode="numeric" maxlength="4" placeholder="Code" autocomplete="off">
+    <button id="b-login">Ouvrir</button>
+    <div class="err" id="login-err"></div>
+  </div>
+
+  <div id="app" style="display:none">
+    <h1 id="titre">Pointage Arvorik</h1>
+    <div class="onglets">
+      <button data-vue="v-jour" class="actif">☀️ Journée</button>
+      <button data-vue="v-semaine">📅 Semaine</button>
+      <button data-vue="v-histo">👤 Historique</button>
+      <button data-vue="v-verif">À vérifier</button>
+      <button data-vue="v-totaux">Totaux du mois</button>
+      <button data-vue="v-fiche">Fiche horaire</button>
+    </div>
+    <div class="barre">
+      <label for="mois">Mois</label>
+      <select id="mois"></select>
+      <button class="act" id="b-rafraichir">Actualiser</button>
+      <button class="act" id="ajout-global">➕ Ajouter un pointage</button>
+      <span class="petit" id="maj"></span>
+    </div>
+
+    <section class="vue actif" id="v-jour">
+      <div class="acc-tete">
+        <div><div class="acc-date" id="j-titre"></div><div class="acc-heure" id="j-heure"></div></div>
+        <div class="nav-jour">
+          <button id="j-prec" aria-label="Jour précédent">◀</button>
+          <input type="date" id="j-date">
+          <button id="j-suiv" aria-label="Jour suivant">▶</button>
+          <button id="j-auj" class="auj">Aujourd’hui</button>
+        </div>
+      </div>
+      <div id="accueil"><p class="vide">Chargement…</p></div>
+      <h2 class="acc-sous">🗺️ Carte des pointages de la journée</h2>
+      <div id="carte"></div>
+      <p class="petit">Cercles : zones des sites. Points : chaque pointage (vert, orange, rouge).</p>
+    </section>
+
+    <section class="vue" id="v-semaine">
+      <div class="barre">
+        <div class="nav-jour">
+          <button id="s-prec" aria-label="Semaine précédente">◀</button>
+          <b id="s-titre"></b>
+          <button id="s-suiv" aria-label="Semaine suivante">▶</button>
+          <button id="s-auj" class="auj">Cette semaine</button>
+        </div>
+      </div>
+      <div class="tableau" id="t-semaine"><p class="vide">Chargement…</p></div>
+      <p class="petit">Heures travaillées (pauses déduites). Touche une case pour ouvrir la journée.</p>
+    </section>
+
+    <section class="vue" id="v-histo">
+      <div class="barre"><select id="h-nom"></select><span class="petit">Mois choisi en haut.</span></div>
+      <div id="t-histo"><p class="vide">Choisis un salarié.</p></div>
+    </section>
+
+    <section class="vue" id="v-verif">
+      <p class="petit">Orange : saisie manuelle, position imprécise ou proche de la zone. Rouge : loin de tous les sites ou sans position. Les salariés ne voient pas ces couleurs.</p>
+      <div class="tableau" id="t-verif"></div>
+    </section>
+    <section class="vue" id="v-totaux">
+      <div class="tableau" id="t-totaux"></div>
+      <div id="t-manquants"></div>
+    </section>
+    <section class="vue" id="v-fiche">
+      <div class="barre noprint">
+        <select id="f-nom"></select>
+        <button class="act" id="b-fiche">Afficher</button>
+        <button class="act" id="b-pdf">Créer le PDF dans le Drive</button>
+        <button class="act" id="b-tous">Créer les fiches de tous</button>
+        <span class="petit" id="f-msg"></span>
+      </div>
+      <div id="t-fiche"></div>
+    </section>
+  </div>
+</main>
+
+<div class="fond" id="fond">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-titre">
+    <h2 id="m-titre">Ajouter un pointage</h2>
+    <div id="m-nom-bloc"><label for="m-nom">Salarié</label><select id="m-nom"></select></div>
+    <label for="m-type">Pointage</label>
+    <select id="m-type">
+      <option>Arrivée</option><option>Début pause matin</option><option>Fin pause matin</option>
+      <option>Début pause midi</option><option>Fin pause midi</option>
+      <option>Début pause après-midi</option><option>Fin pause après-midi</option><option>Départ</option>
+    </select>
+    <label for="m-date">Date</label><input type="date" id="m-date">
+    <label for="m-heure">Heure</label><input type="time" id="m-heure">
+    <div id="m-ajout-bloc">
+      <label for="m-motif">Motif (facultatif)</label><input type="text" id="m-motif" placeholder="ex. a oublié sa pause midi">
+      <label class="coche"><input type="checkbox" id="m-oubli" checked> Compter comme un oubli du salarié (compte pour la prime)</label>
+    </div>
+    <p class="err" id="m-err"></p>
+    <div class="boutons"><button class="b-non" id="m-annuler">Fermer</button><button class="b-ok" id="m-ok">Enregistrer</button></div>
+  </div>
+</div>
+
+<script>
+  const API = 'https://script.google.com/macros/s/AKfycbynZrgPzIZC-0zxY21wTGC-YiDI3kzL1W0G2lkqpTtHxE1meDzWPvAcd1neB5ipyiRK8Q/exec';
+  // Appel du serveur Google sans compte Google (évite « Impossible d'ouvrir le fichier »)
+  window.google = { script: { run: (function fabrique(ok, ko) {
+    return new Proxy({}, { get(_, nom) {
+      if (nom === 'withSuccessHandler') return f => fabrique(f, ko);
+      if (nom === 'withFailureHandler') return f => fabrique(ok, f);
+      return (...args) => {
+        fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ fn: nom, args: args }) })
+          .then(r => r.json())
+          .then(r => { if (r.ok) { if (ok) ok(r.data); } else if (ko) ko(new Error(r.erreur)); })
+          .catch(() => { if (ko) ko(new Error('Pas de réseau. Réessaie dans un instant.')); });
+      };
+    } });
+  })() } };
+  const JETON = (new URLSearchParams(location.search).get('a') || '').replace(/[^a-zA-Z0-9]/g, '');
+  try {
+    if (JETON) localStorage.setItem('jeton_admin', JETON);
+    else { const j = localStorage.getItem('jeton_admin'); if (j) location.replace('?a=' + j); }
+  } catch (e) {}
+  const CLE = 'admin_' + JETON;
+  let PIN = '';
+  let DONNEES = null, JOUR = null, NOMS = [];
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const hm = m => { m = Math.round(m || 0); return Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0'); };
+  const dateFr = d => { const p = d.split('-'); return p[2] + '/' + p[1]; };
+  const jourLong = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const jourCourt = d => new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+  const isoLocal = dt => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  const aujourdhui = () => isoLocal(new Date());
+  const decale = (d, n) => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + n); return isoLocal(x); };
+  const dist = v => v === '' || v == null ? '' : (v >= 1000 ? (v / 1000).toFixed(1) + ' km' : v + ' m');
+  function memo(p) { try { p ? localStorage.setItem(CLE, p) : localStorage.removeItem(CLE); } catch (e) {} }
+  function lu() { try { return localStorage.getItem(CLE) || ''; } catch (e) { return ''; } }
+  const PLAN_EM = { Repos: '🛌', 'Congé': '🏖️', 'Arrêt': '🤒', 'Férié': '🎉', Travail: '👷', Garde: '🐄', Astreinte: '📟' };
+  const planTxt = p => p ? (PLAN_EM[p] || '📋') + ' ' + (p === 'Arrêt' ? 'Arrêt maladie' : p) : '';
+  let DATE = aujourdhui();
+  let LUNDI = null;
+
+  // Mois proposés : les 12 derniers
+  (function () {
+    const s = $('mois'); const n = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(n.getFullYear(), n.getMonth() - i, 1);
+      const v = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      const o = document.createElement('option'); o.value = v;
+      o.textContent = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      s.appendChild(o);
+    }
+  })();
+
+  if (!JETON) $('login-err').textContent = 'Lien incomplet : ouvre ton lien tableau de bord complet (avec ?a=…).';
+  function login(p, silencieux) {
+    google.script.run
+      .withSuccessHandler(r => { PIN = p; memo(p); $('login').style.display = 'none'; $('app').style.display = 'block';
+        $('titre').textContent = 'Pointage Arvorik, ' + r.nom; charger(); })
+      .withFailureHandler(e => { memo(''); if (!silencieux) $('login-err').textContent = e.message; })
+      .connexionAdmin(JETON, p);
+  }
+  $('b-login').onclick = () => login($('pin').value, false);
+  $('pin').onkeydown = e => { if (e.key === 'Enter') login($('pin').value, false); };
+  if (JETON && lu()) login(lu(), true);
+
+  function montrerVue(id) {
+    document.querySelectorAll('[data-vue]').forEach(x => x.classList.toggle('actif', x.dataset.vue === id));
+    document.querySelectorAll('.vue').forEach(v => v.classList.toggle('actif', v.id === id));
+    if (id === 'v-semaine') chargerSemaine();
+    if (id === 'v-histo') chargerHisto();
+    if (id === 'v-jour' && CARTE) setTimeout(() => CARTE.invalidateSize(), 50);
+  }
+  document.querySelectorAll('[data-vue]').forEach(b => b.onclick = () => montrerVue(b.dataset.vue));
+  $('b-rafraichir').onclick = charger;
+  $('mois').onchange = () => { charger(); if ($('v-histo').classList.contains('actif')) chargerHisto(); };
+
+  /* ---------- Journée ---------- */
+  const ETATS = {
+    present: { txt: 'Au travail', em: '🟢' }, pause: { txt: 'En pause', em: '☕' },
+    parti: { txt: 'Parti', em: '🏠' }, absent: { txt: 'Pas pointé', em: '⏳' }, oubli: { txt: 'Départ non pointé', em: '⚠️' }
+  };
+  const PAUSES = { matin: ['☕', 'Pause matin'], midi: ['🍽️', 'Pause midi'], 'après-midi': ['🥐', 'Pause après-midi'], pause: ['⏸️', 'Pause'] };
+  function allerJour(d) { DATE = d; $('j-date').value = d; chargerAccueil(); }
+  $('j-prec').onclick = () => allerJour(decale(DATE, -1));
+  $('j-suiv').onclick = () => allerJour(decale(DATE, 1));
+  $('j-auj').onclick = () => allerJour(aujourdhui());
+  $('j-date').onchange = () => { if ($('j-date').value) allerJour($('j-date').value); };
+  $('j-date').value = DATE;
+
+  function chargerAccueil() {
+    $('j-titre').textContent = jourLong(DATE);
+    $('j-heure').textContent = DATE === aujourdhui() ? '…' : (DATE < aujourdhui() ? 'Journée passée' : 'À venir');
+    const demande = DATE;
+    google.script.run.withSuccessHandler(d => { if (d.date === demande) rendreAccueil(d); })
+      .withFailureHandler(e => { $('accueil').innerHTML = '<p class="alerte">' + esc(e.message) + '</p>'; })
+      .accueilAdmin(JETON, PIN, DATE);
+  }
+  setInterval(() => {
+    if (PIN && DATE === aujourdhui() && $('v-jour').classList.contains('actif') && !$('fond').classList.contains('ouvert') &&
+      !document.querySelector('details.evts[open]')) chargerAccueil();
+  }, 60000);
+
+  function rendreAccueil(d) {
+    JOUR = d;
+    const s = d.salaries;
+    const n = k => s.filter(x => x.etat === k).length;
+    const alertes = s.filter(x => x.pire === 'Rouge' || x.pire === 'Orange').length;
+    const nonPrevus = s.filter(x => x.nonPrevu);
+    const conges = s.filter(x => x.etat === 'absent' && x.absPrevue);
+    const ordre = { oubli: 0, present: 1, pause: 2, parti: 3, absent: 4 };
+    s.sort((a, b) => ordre[a.etat] - ordre[b.etat] || a.nom.localeCompare(b.nom));
+    $('j-titre').textContent = jourLong(d.date);
+    $('j-heure').textContent = d.aujourdhui ? d.heure : (d.date < aujourdhui() ? 'Journée passée' : 'À venir');
+    const debut = 300, fin = Math.max(1260, d.maintenant + 30), span = fin - debut;
+    const pct = m => Math.max(0, Math.min(100, (m - debut) / span * 100));
+    const kpi = (em, val, lab, cl) => '<div class="kpi ' + cl + '"><span class="kpi-em">' + em + '</span><b>' + val + '</b><span>' + lab + '</span></div>';
+    let html = '';
+    html += '<div class="kpis">' + (d.aujourdhui ? kpi('🟢', n('present'), 'au travail', 'k-vert') + kpi('☕', n('pause'), 'en pause', 'k-paille') : '') +
+      kpi('🏠', n('parti'), d.aujourdhui ? 'partis' : 'ont travaillé', 'k-ardoise') +
+      (n('oubli') ? kpi('⚠️', n('oubli'), 'départ non pointé', 'k-rouge') : '') +
+      kpi('🚫', nonPrevus.length, 'absents non prévus', nonPrevus.length ? 'k-rouge' : 'k-gris') +
+      kpi('🏖️', conges.length, 'repos / congé / arrêt', 'k-gris') +
+      kpi('⚠️', alertes, 'à vérifier', alertes ? 'k-rouge' : 'k-gris') + '</div>';
+    if (nonPrevus.length) html += '<div class="bandeau b-rouge">🚫 <b>Prévu au planning mais pas pointé</b>' + (d.aujourdhui ? ' (après 9 h)' : '') + ' : ' +
+      nonPrevus.map(x => esc(x.nom) + ' (' + esc(x.plan) + ')').join(', ') + '</div>';
+    if (!s.some(x => x.plan)) html += '<div class="bandeau b-info">📋 Pas de planning enregistré pour ce jour : repos, congés et arrêts ne sont pas encore affichés.</div>';
+    const actifs = s.filter(x => x.etat !== 'absent'), absents = s.filter(x => x.etat === 'absent');
+    html += actifs.length ? '<div class="cartes">' + actifs.map(x => carte(x, pct, d)).join('') + '</div>'
+      : '<p class="vide">Personne n’a pointé ' + (d.aujourdhui ? 'aujourd’hui' : 'ce jour-là') + '.</p>';
+    if (absents.length) {
+      html += '<h2 class="acc-sous">Pas de pointage</h2><div class="chips">' + absents.map(x => {
+        const cl = x.nonPrevu ? ' rouge' : x.absPrevue ? ' conge' : '';
+        const t = x.absPrevue ? planTxt(x.plan) : x.nonPrevu ? '🚫 prévu : ' + esc(x.plan) : (x.plan ? planTxt(x.plan) : 'pas pointé');
+        return '<div class="chip' + cl + '"><div class="avatar a-absent">' + esc(x.nom.slice(0, 1).toUpperCase()) + '</div>' + esc(x.nom) +
+          ' <span>' + t + '</span>' + (x.evts.length ? ' <span>(' + x.evts.length + ' annulé)</span>' : '') +
+          ' <button class="mini" onclick="ouvrirAjout(\'' + esc(x.nom) + '\')" title="Ajouter un pointage">➕</button></div>';
+      }).join('') + '</div>';
+    }
+    $('accueil').innerHTML = html;
+    dessinerCarte(d);
+  }
+  function lieuDe(p) {
+    if (!p) return '';
+    if (p.site && String(p.site).indexOf('Saisi par') === 0) return '<span class="petit">✍️ ' + esc(p.site) + '</span>';
+    const lien = (p.lat !== '' && p.lat != null)
+      ? '<a href="https://www.google.com/maps?q=' + p.lat + ',' + p.lng + '" target="_blank" rel="noopener">📍 ' + esc(p.site || 'Position') +
+        (p.dist !== '' ? ', ' + dist(p.dist) : '') + '</a>'
+      : '<span class="alerte">📍 sans position</span>';
+    return lien + (p.statut ? ' <span class="pastille ' + esc(p.statut) + '">' + esc(p.statut) + '</span>' : '');
+  }
+  function listeEvts(evts) {
+    return evts.map(e => {
+      const annule = /^Annulé/.test(e.type);
+      const tag = e.admin ? ' <span class="petit">(ajouté par l’employeur)</span>' : e.manuel ? ' <span class="petit">(oubli encodé)</span>' : '';
+      return '<div class="evt' + (annule ? ' annule' : '') + '"><span class="t"><b>' + esc(e.heure) + '</b> ' + esc(e.type) + tag +
+        (e.motif ? '<br><span class="petit">' + esc(e.motif) + '</span>' : '') + '</span>' +
+        (annule ? '' : '<button class="mini" onclick="ouvrirModif(' + e.ligne + ',\'' + esc(e.type) + '\',\'' + esc(e.date || DATE) + '\',\'' + esc(e.heure) + '\')">✏️ Modifier</button>' +
+        '<button class="mini danger" onclick="annulerEvt(' + e.ligne + ', this)">✖ Annuler</button>') + '</div>';
+    }).join('');
+  }
+  function carte(x, pct, d) {
+    const e = ETATS[x.etat];
+    const init = esc(x.nom.slice(0, 1).toUpperCase());
+    let sous = '';
+    if (x.etat === 'present') sous = 'depuis ' + x.arrivee.heure;
+    else if (x.etat === 'pause') sous = PAUSES[x.enPause.cle][1].toLowerCase() + ', ' + x.enPause.depuis + ' min';
+    else if (x.etat === 'parti') sous = 'à ' + x.depart;
+    else if (x.etat === 'oubli' && x.arrivee) sous = 'arrivé à ' + x.arrivee.heure;
+    const blocs = x.blocs.map(b => '<i class="bloc b-' + b.g + (b.live ? ' live' : '') + '" style="left:' + pct(b.d) +
+      '%;width:' + Math.max(0.8, pct(b.f) - pct(b.d)) + '%"></i>').join('');
+    const ticks = [6, 9, 12, 15, 18, 21].map(h => '<span style="left:' + pct(h * 60) + '%">' + h + 'h</span>').join('');
+    const a = x.arrivee;
+    const l = [];
+    if (a) l.push('<div class="ligne"><span>🚪 Arrivée</span><b>' + a.heure + '</b><span class="lieu">' + lieuDe(a) + '</span></div>');
+    x.pauses.forEach(p => l.push('<div class="ligne' + (p.orphelin ? ' en-cours' : '') + '"><span>' + PAUSES[p.cle][0] + ' ' + PAUSES[p.cle][1] + '</span><b>' +
+      p.debut + ' → ' + p.fin + '</b><span class="dur">' + (p.orphelin ? '⚠️ sans début' : p.min + ' min') + '</span>' +
+      '<div class="ligne-pos">' + (p.posD ? 'Début ' + lieuDe(p.posD) + ' · ' : '') + 'Fin ' + lieuDe(p.posF) + '</div></div>'));
+    if (x.enPause) l.push('<div class="ligne en-cours"><span>' + PAUSES[x.enPause.cle][0] + ' ' + PAUSES[x.enPause.cle][1] +
+      '</span><b>' + x.enPause.debut + ' → ' + (d.aujourdhui ? 'en cours' : '?') + '</b><span class="dur">' + (d.aujourdhui ? x.enPause.depuis + ' min' : '⚠️ sans fin') + '</span>' +
+      '<div class="ligne-pos">Début ' + lieuDe(x.enPause.posD) + '</div></div>');
+    if (x.depart) l.push('<div class="ligne"><span>🏁 Départ</span><b>' + x.depart + '</b><span class="lieu">' + lieuDe(x.posDepart) + '</span></div>');
+    const alerte = x.pire === 'Rouge' || x.pire === 'Orange';
+    const trop = x.oublis > d.tolerance;
+    return '<div class="carte ' + x.etat + '"><div class="c-tete"><div class="avatar a-' + x.etat + '">' + init +
+      '</div><div class="c-nom"><b>' + esc(x.nom) + '</b><div class="etat e-' + x.etat + '">' + e.em + ' ' + e.txt +
+      ' <span>' + esc(sous) + '</span></div>' + (x.plan && x.plan !== 'Travail' ? '<div class="petit">' + planTxt(x.plan) + ' au planning</div>' : '') +
+      '</div><div class="c-total"><b>' + hm(x.net) + '</b><span>travaillé' +
+      (x.pauseTot ? ', ' + x.pauseTot + ' min de pause' : '') + '</span></div></div>' +
+      '<div class="frise">' + blocs + (d.maintenant >= 0 ? '<i class="maintenant" style="left:' + pct(d.maintenant) + '%"></i>' : '') + '</div>' +
+      '<div class="graduation">' + ticks + '</div>' + l.join('') +
+      (alerte || x.manuel ? '<div class="avert">' + (x.manuel ? '✍️ Contient un oubli encodé. ' : '') +
+        (alerte ? '⚠️ Un pointage est à vérifier, voir l’onglet « À vérifier ».' : '') + '</div>' : '') +
+      '<div class="oublis' + (trop ? ' trop' : '') + '">✍️ Oublis ce mois : ' + x.oublis + ' / ' + d.tolerance + ' tolérés' + (trop ? ' — dépassé' : '') + '</div>' +
+      '<details class="evts"><summary>🔧 Corriger les pointages (' + x.evts.length + ')</summary>' + listeEvts(x.evts) +
+      '<div class="c-actions"><button class="mini" onclick="ouvrirAjout(\'' + esc(x.nom) + '\')">➕ Ajouter un pointage (ex. pause oubliée)</button></div></details></div>';
+  }
+
+  /* ---------- Carte ---------- */
+  let CARTE = null, COUCHE = null;
+  const COUL = { Vert: '#2E6B3F', Orange: '#C77A12', Rouge: '#B3321F' };
+  function dessinerCarte(d) {
+    if (!window.L) { $('carte').innerHTML = '<p class="vide">Carte indisponible (pas de réseau).</p>'; return; }
+    if (!CARTE) {
+      CARTE = L.map('carte', { scrollWheelZoom: false });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(CARTE);
+      COUCHE = L.layerGroup().addTo(CARTE);
+    }
+    COUCHE.clearLayers();
+    const pts = [];
+    d.sites.forEach(s => {
+      L.circle([s.lat, s.lng], { radius: s.r, color: '#3B4E63', weight: 1, fillOpacity: 0.06 }).bindTooltip(s.nom).addTo(COUCHE);
+      pts.push([s.lat, s.lng]);
+    });
+    d.salaries.forEach(x => x.evts.forEach(e => {
+      if (e.lat === '' || e.lat == null || /^Annulé/.test(e.type)) return;
+      const ll = [Number(e.lat), Number(e.lng)];
+      L.circleMarker(ll, { radius: 7, color: '#fff', weight: 2, fillColor: COUL[e.statut] || '#5B675F', fillOpacity: 1 })
+        .bindPopup('<b>' + esc(x.nom) + '</b><br>' + esc(e.type) + ' à ' + esc(e.heure) + '<br>' + esc(e.site || '') + (e.dist !== '' ? ', ' + dist(e.dist) : ''))
+        .addTo(COUCHE);
+      pts.push(ll);
+    }));
+    if (pts.length) CARTE.fitBounds(pts, { padding: [30, 30], maxZoom: 15 });
+    setTimeout(() => CARTE.invalidateSize(), 50);
+  }
+
+  /* ---------- Semaine ---------- */
+  $('s-prec').onclick = () => { LUNDI = decale(LUNDI, -7); chargerSemaine(); };
+  $('s-suiv').onclick = () => { LUNDI = decale(LUNDI, 7); chargerSemaine(); };
+  $('s-auj').onclick = () => { LUNDI = null; chargerSemaine(); };
+  function chargerSemaine() {
+    $('t-semaine').innerHTML = '<p class="vide">Chargement…</p>';
+    google.script.run.withSuccessHandler(rendreSemaine)
+      .withFailureHandler(e => { $('t-semaine').innerHTML = '<p class="alerte">' + esc(e.message) + '</p>'; })
+      .semaineAdmin(JETON, PIN, LUNDI || aujourdhui());
+  }
+  function rendreSemaine(d) {
+    LUNDI = d.lundi;
+    $('s-titre').textContent = 'Semaine du ' + new Date(d.lundi + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+    const totJ = d.jours.map((j, i) => d.lignes.reduce((s, l) => s + l.cases[i].net, 0));
+    let h = '<table class="sem"><tr><th>Salarié</th>' + d.jours.map(j => '<th class="' + (j === d.aujourdhui ? 'auj' : '') + '">' + esc(jourCourt(j)) + '</th>').join('') + '<th>Total</th></tr>';
+    d.lignes.forEach(l => {
+      h += '<tr><td><b>' + esc(l.nom) + '</b></td>' + l.cases.map(c => {
+        const contenu = (c.net ? '<b>' + hm(c.net) + '</b>' : (c.plan && c.plan !== 'Travail' ? '' : '<span class="petit">–</span>')) +
+          (c.plan && c.plan !== 'Travail' ? '<div class="plan">' + planTxt(c.plan) + '</div>' : '') +
+          (c.manq.length ? '<div class="manq">⚠️ ' + esc(c.manq.join(', ')) + '</div>' : '');
+        return '<td class="clic' + (c.date === d.aujourdhui ? ' auj' : '') + '" onclick="ouvrirJour(\'' + c.date + '\')">' + contenu + '</td>';
+      }).join('') + '<td><b>' + hm(l.total) + '</b></td></tr>';
+    });
+    h += '<tr><td class="petit">Total équipe</td>' + totJ.map(t => '<td class="petit">' + (t ? hm(t) : '–') + '</td>').join('') +
+      '<td class="petit">' + hm(totJ.reduce((a, b) => a + b, 0)) + '</td></tr></table>';
+    $('t-semaine').innerHTML = h;
+  }
+  function ouvrirJour(d) { montrerVue('v-jour'); allerJour(d); }
+
+  /* ---------- Historique ---------- */
+  $('h-nom').onchange = chargerHisto;
+  function chargerHisto() {
+    if (!$('h-nom').value) return;
+    $('t-histo').innerHTML = '<p class="vide">Chargement…</p>';
+    google.script.run.withSuccessHandler(rendreHisto)
+      .withFailureHandler(e => { $('t-histo').innerHTML = '<p class="alerte">' + esc(e.message) + '</p>'; })
+      .historiqueAdmin(JETON, PIN, $('h-nom').value, $('mois').value);
+  }
+  function rendreHisto(d) {
+    const trop = d.oublis > d.tolerance;
+    let h = '<div class="resume"><div class="kpi k-ardoise"><span>Total du mois</span><b>' + hm(d.total) + '</b></div>' +
+      '<div class="kpi k-vert"><span>Jours travaillés</span><b>' + d.jours.filter(j => j.net > 0).length + '</b></div>' +
+      '<div class="kpi ' + (trop ? 'k-rouge' : 'k-gris') + '"><span>Oublis</span><b>' + d.oublis + ' / ' + d.tolerance + '</b></div>' +
+      '<button class="act" onclick="ouvrirAjout(\'' + esc(d.nom) + '\')">➕ Ajouter un pointage</button></div>';
+    if (!d.jours.length) h += '<p class="vide">Aucun pointage ce mois-ci.</p>';
+    d.jours.slice().reverse().forEach(j => {
+      j.evts.forEach(e => e.date = j.date);
+      h += '<div class="jour-h"><div class="tt"><span>' + esc(jourCourt(j.date)) + (j.plan ? ' · <span class="plan">' + planTxt(j.plan) + '</span>' : '') +
+        '</span><span>' + (j.net ? hm(j.net) + (j.pause ? ' <span class="petit">(' + j.pause + ' min pause)</span>' : '') : '') +
+        ' <button class="mini" onclick="ouvrirJour(\'' + j.date + '\')">Voir la journée</button></span></div>' +
+        listeEvts(j.evts) + j.manq.map(m => '<div class="alerte petit">⚠️ ' + esc(m.heure + ' ' + m.quoi) + '</div>').join('') + '</div>';
+    });
+    $('t-histo').innerHTML = h;
+  }
+
+  /* ---------- Ajouter / modifier / annuler ---------- */
+  let MODE = null;
+  function remplirNoms() {
+    ['m-nom', 'h-nom', 'f-nom'].forEach(id => {
+      const s = $(id);
+      if (s.options.length) return;
+      if (id === 'h-nom') { const o = document.createElement('option'); o.value = ''; o.textContent = 'Choisis un salarié'; s.appendChild(o); }
+      NOMS.forEach(n => { const o = document.createElement('option'); o.textContent = n; s.appendChild(o); });
+    });
+  }
+  function ouvrirAjout(nom) {
+    MODE = { action: 'ajout' };
+    $('m-titre').textContent = 'Ajouter un pointage';
+    $('m-nom-bloc').style.display = ''; $('m-ajout-bloc').style.display = '';
+    if (nom) $('m-nom').value = nom;
+    $('m-date').value = $('v-jour').classList.contains('actif') ? DATE : aujourdhui();
+    $('m-heure').value = ''; $('m-motif').value = ''; $('m-oubli').checked = true; $('m-err').textContent = '';
+    $('fond').classList.add('ouvert'); $('m-type').focus();
+  }
+  function ouvrirModif(ligne, type, date, heure) {
+    MODE = { action: 'modifier', ligne: ligne };
+    $('m-titre').textContent = 'Modifier le pointage';
+    $('m-nom-bloc').style.display = 'none'; $('m-ajout-bloc').style.display = 'none';
+    const sel = $('m-type');
+    if (![...sel.options].some(o => o.value === type)) { const o = document.createElement('option'); o.textContent = type; o.dataset.extra = '1'; sel.appendChild(o); }
+    sel.value = type; $('m-date').value = date; $('m-heure').value = heure; $('m-err').textContent = '';
+    $('fond').classList.add('ouvert'); $('m-heure').focus();
+  }
+  function fermer() { $('fond').classList.remove('ouvert'); document.querySelectorAll('#m-type option[data-extra]').forEach(o => o.remove()); }
+  $('m-annuler').onclick = fermer;
+  $('fond').onclick = e => { if (e.target === $('fond')) fermer(); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') fermer(); });
+  $('ajout-global').onclick = () => ouvrirAjout('');
+  function apresChangement() { fermer(); chargerAccueil(); charger(true); if ($('v-histo').classList.contains('actif')) chargerHisto(); if ($('v-semaine').classList.contains('actif')) chargerSemaine(); }
+  $('m-ok').onclick = () => {
+    const b = $('m-ok');
+    if (!$('m-date').value || !$('m-heure').value) { $('m-err').textContent = 'Indique la date et l’heure.'; return; }
+    b.disabled = true; b.textContent = '…';
+    const fin = () => { b.disabled = false; b.textContent = 'Enregistrer'; };
+    const ko = e => { fin(); $('m-err').textContent = e.message; };
+    if (MODE.action === 'ajout') {
+      google.script.run.withSuccessHandler(() => { fin(); apresChangement(); }).withFailureHandler(ko)
+        .ajouterPointageAdmin(JETON, PIN, { nom: $('m-nom').value, type: $('m-type').value, date: $('m-date').value,
+          heure: $('m-heure').value, motif: $('m-motif').value, oubli: $('m-oubli').checked });
+    } else {
+      google.script.run.withSuccessHandler(() => { fin(); apresChangement(); }).withFailureHandler(ko)
+        .modifierPointageAdmin(JETON, PIN, MODE.ligne, { action: 'modifier', type: $('m-type').value, date: $('m-date').value, heure: $('m-heure').value });
+    }
+  };
+  function annulerEvt(ligne, b) {
+    if (!b.classList.contains('sur')) { b.classList.add('sur'); b.textContent = 'Confirmer l’annulation'; setTimeout(() => { b.classList.remove('sur'); b.textContent = '✖ Annuler'; }, 5000); return; }
+    b.disabled = true; b.textContent = '…';
+    google.script.run.withSuccessHandler(apresChangement)
+      .withFailureHandler(e => { b.disabled = false; b.textContent = e.message; })
+      .modifierPointageAdmin(JETON, PIN, ligne, { action: 'annuler' });
+  }
+
+  /* ---------- Onglets du mois ---------- */
+  function charger(sansAccueil) {
+    if (sansAccueil !== true) chargerAccueil();
+    $('maj').textContent = 'Chargement…';
+    google.script.run
+      .withSuccessHandler(d => { DONNEES = d; NOMS = d.noms; remplirNoms(); rendre(); $('maj').textContent = 'À jour à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); })
+      .withFailureHandler(e => { $('maj').textContent = e.message; })
+      .donneesAdmin(JETON, PIN, $('mois').value);
+  }
+
+  function rendre() {
+    const d = DONNEES;
+    $('t-verif').innerHTML = d.aVerifier.length
+      ? '<table><tr><th>Date</th><th>Salarié</th><th>Pointage</th><th>Contrôle</th><th>Position</th><th>Motif</th><th></th></tr>' +
+        d.aVerifier.map(v => `<tr><td>${dateFr(v.date)}</td><td>${esc(v.nom)}</td>
+          <td>${esc(v.type)} ${esc(v.heure)}${v.type === 'Pause' ? ' (' + v.min + ' min)' : ''}${v.manuel ? '<br><span class="petit">saisie manuelle</span>' : ''}</td>
+          <td><span class="pastille ${esc(v.statut)}">${esc(v.statut)}</span></td>
+          <td>${v.lat !== '' && v.lat != null ? `<a href="https://www.google.com/maps?q=${v.lat},${v.lng}" target="_blank" rel="noopener">${v.dist !== '' ? dist(v.dist) + ' de ' + esc(v.site) : 'Voir'}</a>${v.prec ? '<br><span class="petit">précision ' + v.prec + ' m</span>' : ''}` : '<span class="alerte">Pas de position</span>'}</td>
+          <td>${esc(v.motif)}</td>
+          <td><button class="act" onclick="valider(${v.ligne}, this)">Vérifié</button></td></tr>`).join('') + '</table>'
+      : '<p class="vide">Rien à vérifier ce mois-ci.</p>';
+
+    $('t-totaux').innerHTML = '<table><tr><th>Salarié</th><th>Semaine en cours</th><th>Mois</th><th>Jours</th><th>Titres-resto</th><th>Oublis</th><th>À déduire de la prime</th></tr>' +
+      d.totaux.map(t => `<tr><td>${esc(t.nom)}</td><td class="n">${hm(t.semaine)}</td><td class="n">${hm(t.mois)}</td>
+        <td class="n">${t.jours}</td><td class="n">${t.tr}</td><td class="n">${t.oublis} / ${d.tolerance}</td>
+        <td class="n ${t.depassement ? 'alerte' : ''}">${t.depassement ? t.depassement + ' oubli' + (t.depassement > 1 ? 's' : '') : '–'}</td></tr>`).join('') +
+      `</table><p class="petit" style="padding:0 10px 10px">${d.tolerance} oublis tolérés ce mois-ci. Titre-restaurant à partir de ${d.seuilTR} h travaillées dans la journée.</p>`;
+
+    const manq = [];
+    d.totaux.forEach(t => t.manquants.forEach(m => manq.push(Object.assign({ nom: t.nom }, m))));
+    $('t-manquants').innerHTML = manq.length
+      ? '<h2>Pointages incomplets</h2><div class="tableau"><table><tr><th>Date</th><th>Salarié</th><th>Problème</th><th></th></tr>' +
+        manq.map(m => `<tr><td>${dateFr(m.date)} ${esc(m.heure)}</td><td>${esc(m.nom)}</td><td class="alerte">${esc(m.quoi)}</td>
+          <td><button class="mini" onclick="ouvrirJour('${m.date}')">Voir / corriger</button></td></tr>`).join('') +
+        '</table></div><p class="petit">Ces journées ne sont pas comptées tant que le pointage manquant n’est pas ajouté.</p>'
+      : '';
+  }
+
+  function valider(ligne, bouton) {
+    bouton.disabled = true; bouton.textContent = '…';
+    google.script.run
+      .withSuccessHandler(() => { bouton.closest('tr').remove(); })
+      .withFailureHandler(e => { bouton.disabled = false; bouton.textContent = e.message; })
+      .valider(JETON, PIN, ligne);
+  }
+
+  $('b-fiche').onclick = () => {
+    $('t-fiche').innerHTML = '<p class="vide">Chargement…</p>';
+    google.script.run
+      .withSuccessHandler(html => {
+        const fr = document.createElement('iframe');
+        fr.style.cssText = 'width:100%;max-width:820px;height:1160px;border:1px solid #DADFD8;background:#fff;border-radius:8px';
+        fr.srcdoc = html;
+        $('t-fiche').innerHTML = '';
+        $('t-fiche').appendChild(fr);
+      })
+      .withFailureHandler(e => { $('t-fiche').innerHTML = '<p class="alerte">' + esc(e.message) + '</p>'; })
+      .ficheApercu(JETON, PIN, $('f-nom').value, $('mois').value);
+  };
+  const lienPdf = r => '<a href="' + r.url + '" target="_blank" rel="noopener">' + esc(r.titre) + '</a>';
+  $('b-pdf').onclick = () => {
+    $('f-msg').textContent = 'Création du PDF…';
+    google.script.run
+      .withSuccessHandler(r => { $('f-msg').innerHTML = 'Créé : ' + lienPdf(r); })
+      .withFailureHandler(e => { $('f-msg').textContent = e.message; })
+      .creerFichePDF(JETON, PIN, $('f-nom').value, $('mois').value);
+  };
+  $('b-tous').onclick = () => {
+    $('f-msg').textContent = 'Création des fiches…';
+    google.script.run
+      .withSuccessHandler(l => { $('f-msg').innerHTML = l.length + ' fiches créées dans « Fiches horaires » : ' + l.map(lienPdf).join(', '); })
+      .withFailureHandler(e => { $('f-msg').textContent = e.message; })
+      .creerToutesFiches(JETON, PIN, $('mois').value);
+  };
+</script>
+</body>
+</html>
