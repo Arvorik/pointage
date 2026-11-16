@@ -119,10 +119,62 @@
   .modal .coche input { width: auto; margin-top: 3px; }
   .modal .boutons { display: flex; gap: 8px; margin-top: 16px; } .modal .boutons button { flex: 1; padding: 11px; font-size: 15px; border-radius: 10px; cursor: pointer; }
   .b-ok { background: var(--accent); color: #fff; border: 0; } .b-non { background: #fff; border: 2px solid var(--ligne); color: var(--texte); }
-  #ajout-global { background: #2E6B3F; color: #fff; border-color: #2E6B3F; }
+  #ajout-global { position: fixed; right: 20px; bottom: 20px; z-index: 900; background: #2E6B3F; color: #fff; border: 0;
+    border-radius: 99px; padding: 13px 20px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(23,34,27,.3); }
+  #ajout-global .plus { font-size: 18px; }
+  .onglets .ic { margin-right: 6px; }
+  .liste-sem .ls-j { display: grid; grid-template-columns: 92px 1fr; gap: 6px; padding: 7px 0; border-top: 1px solid var(--ligne); font-size: 14px; cursor: pointer; }
+  .liste-sem .ls-j.auj { background: #F3F7EF; }
+  .liste-sem .tt { text-transform: none; font-size: 16px; }
+  @media (max-width: 700px) {
+    body { font-size: 15px; }
+    main { padding: 10px 12px 96px; }
+    h1 { font-size: 16px; margin: 2px 0 8px; color: var(--doux); }
+    .onglets { position: fixed; left: 0; right: 0; bottom: 0; z-index: 950; margin: 0; gap: 0; display: grid; grid-template-columns: repeat(6, 1fr);
+      background: #fff; border-top: 1px solid var(--ligne); padding: 4px 2px calc(4px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 10px rgba(0,0,0,.06); }
+    .onglets button { border: 0; border-radius: 10px; padding: 5px 0; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 10.5px; background: none; }
+    .onglets button.actif { background: #E6EDF4; color: var(--accent); font-weight: 700; }
+    .onglets .ic { margin: 0; font-size: 21px; }
+    #ajout-global { bottom: 78px; right: 14px; width: 56px; height: 56px; padding: 0; font-size: 28px; }
+    #ajout-global .lb { display: none; }
+    body.vue-v-jour .barre-mois, body.vue-v-semaine .barre-mois { display: none; }
+    .barre select, .barre button.act { font-size: 14px; padding: 7px 8px; }
+    .acc-tete { flex-direction: column; align-items: stretch; gap: 8px; margin: 0 0 10px; }
+    .acc-date { font-size: 15px; font-weight: 600; color: var(--texte); }
+    .acc-heure { font-size: 22px; }
+    .nav-jour { display: grid; grid-template-columns: 48px 1fr 48px auto; gap: 6px; }
+    .nav-jour button { padding: 10px 0; font-size: 18px; } .nav-jour button.auj { padding: 10px 10px; font-size: 14px; }
+    .nav-jour input { width: 100%; font-size: 16px; }
+    .kpis { grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+    .kpi { padding: 7px 8px; border-radius: 10px; display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; row-gap: 0; }
+    .kpi .kpi-em { font-size: 15px; } .kpi b { font-size: 20px; } .kpi span:last-child { grid-column: 1 / -1; font-size: 11px; line-height: 1.2; }
+    .bandeau { font-size: 14px; padding: 9px 11px; }
+    .cartes { grid-template-columns: 1fr; gap: 10px; }
+    .carte { padding: 12px; border-radius: 14px; }
+    .c-nom b { font-size: 18px; } .c-total b { font-size: 21px; }
+    .ligne { grid-template-columns: 1fr auto; font-size: 14.5px; padding: 7px 0; }
+    .ligne .lieu, .ligne .dur { grid-column: 1 / -1; text-align: left; font-size: 12.5px; }
+    .ligne .dur { grid-column: auto; text-align: right; }
+    .ligne-pos { font-size: 12px; }
+    .mini { font-size: 13px; padding: 7px 10px; }
+    .evt .t { min-width: 100%; }
+    #carte { height: 300px; }
+    .chips { gap: 6px; } .chip { font-size: 14px; }
+    .resume { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .resume .act { grid-column: 1 / -1; }
+    .resume .kpi span { grid-column: 1 / -1; }
+    .tableau { background: none; overflow: visible; }
+    .tableau table { min-width: 0; }
+    .tableau table, .tableau tbody, .tableau tr, .tableau td { display: block; width: 100%; }
+    .tableau tr:first-child { display: none; }
+    .tableau tr { background: var(--carte); border-radius: 12px; margin-bottom: 8px; padding: 6px 12px; }
+    .tableau td { border: 0; padding: 4px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    .tableau td.n { text-align: right; }
+    .tableau td::before { content: attr(data-label); color: var(--doux); font-size: 12.5px; text-align: left; flex: 0 0 auto; }
+    .tableau td:first-child { font-weight: 700; font-size: 16px; } .tableau td:first-child::before { content: none; }
+  }
 </style>
 </head>
-<body>
+<body class="vue-v-jour">
 <main>
   <div id="login">
     <h1>Tableau de bord pointage</h1>
@@ -134,20 +186,20 @@
   <div id="app" style="display:none">
     <h1 id="titre">Pointage Arvorik</h1>
     <div class="onglets">
-      <button data-vue="v-jour" class="actif">☀️ Journée</button>
-      <button data-vue="v-semaine">📅 Semaine</button>
-      <button data-vue="v-histo">👤 Historique</button>
-      <button data-vue="v-verif">À vérifier</button>
-      <button data-vue="v-totaux">Totaux du mois</button>
-      <button data-vue="v-fiche">Fiche horaire</button>
+      <button data-vue="v-jour" class="actif"><span class="ic">☀️</span><span class="lb">Journée</span></button>
+      <button data-vue="v-semaine"><span class="ic">📅</span><span class="lb">Semaine</span></button>
+      <button data-vue="v-histo"><span class="ic">👤</span><span class="lb">Historique</span></button>
+      <button data-vue="v-verif"><span class="ic">⚠️</span><span class="lb">À vérifier</span></button>
+      <button data-vue="v-totaux"><span class="ic">📊</span><span class="lb">Totaux</span></button>
+      <button data-vue="v-fiche"><span class="ic">📄</span><span class="lb">Fiche</span></button>
     </div>
-    <div class="barre">
+    <div class="barre barre-mois">
       <label for="mois">Mois</label>
       <select id="mois"></select>
       <button class="act" id="b-rafraichir">Actualiser</button>
-      <button class="act" id="ajout-global">➕ Ajouter un pointage</button>
       <span class="petit" id="maj"></span>
     </div>
+    <button id="ajout-global" aria-label="Ajouter un pointage"><span class="plus">＋</span><span class="lb"> Ajouter un pointage</span></button>
 
     <section class="vue actif" id="v-jour">
       <div class="acc-tete">
@@ -292,6 +344,8 @@
   if (JETON && lu()) login(lu(), true);
 
   function montrerVue(id) {
+    document.body.className = 'vue-' + id;
+    window.scrollTo(0, 0);
     document.querySelectorAll('[data-vue]').forEach(x => x.classList.toggle('actif', x.dataset.vue === id));
     document.querySelectorAll('.vue').forEach(v => v.classList.toggle('actif', v.id === id));
     if (id === 'v-semaine') chargerSemaine();
@@ -461,8 +515,23 @@
       .withFailureHandler(e => { $('t-semaine').innerHTML = '<p class="alerte">' + esc(e.message) + '</p>'; })
       .semaineAdmin(JETON, PIN, LUNDI || aujourdhui());
   }
+  const mobile = () => window.matchMedia('(max-width: 700px)').matches;
+  function etiqueter(el) {
+    el.querySelectorAll('table').forEach(t => {
+      const th = [...t.querySelectorAll('tr:first-child th')].map(x => x.textContent);
+      t.querySelectorAll('tr').forEach(tr => [...tr.children].forEach((td, i) => { if (td.tagName === 'TD') td.dataset.label = th[i] || ''; }));
+    });
+  }
   function rendreSemaine(d) {
     LUNDI = d.lundi;
+    if (mobile()) {
+      $('s-titre').textContent = 'Sem. du ' + new Date(d.lundi + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+      $('t-semaine').innerHTML = '<div class="liste-sem">' + d.lignes.map(l => '<div class="jour-h"><div class="tt"><span>' + esc(l.nom) + '</span><span>' + hm(l.total) + '</span></div>' +
+        l.cases.map(c => '<div class="ls-j' + (c.date === d.aujourdhui ? ' auj' : '') + '" onclick="ouvrirJour(\'' + c.date + '\')"><span>' + esc(jourCourt(c.date)) + '</span><span>' +
+          (c.net ? '<b>' + hm(c.net) + '</b> ' : '') + (c.plan && c.plan !== 'Travail' ? '<span class="plan">' + planTxt(c.plan) + '</span>' : (c.net ? '' : '<span class="petit">–</span>')) +
+          (c.manq.length ? ' <span class="manq">⚠️ ' + esc(c.manq.join(', ')) + '</span>' : '') + '</span></div>').join('') + '</div>').join('') + '</div>';
+      return;
+    }
     $('s-titre').textContent = 'Semaine du ' + new Date(d.lundi + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
     const totJ = d.jours.map((j, i) => d.lignes.reduce((s, l) => s + l.cases[i].net, 0));
     let h = '<table class="sem"><tr><th>Salarié</th>' + d.jours.map(j => '<th class="' + (j === d.aujourdhui ? 'auj' : '') + '">' + esc(jourCourt(j)) + '</th>').join('') + '<th>Total</th></tr>';
@@ -589,7 +658,7 @@
       d.totaux.map(t => `<tr><td>${esc(t.nom)}</td><td class="n">${hm(t.semaine)}</td><td class="n">${hm(t.mois)}</td>
         <td class="n">${t.jours}</td><td class="n">${t.tr}</td><td class="n">${t.oublis} / ${d.tolerance}</td>
         <td class="n ${t.depassement ? 'alerte' : ''}">${t.depassement ? t.depassement + ' oubli' + (t.depassement > 1 ? 's' : '') : '–'}</td></tr>`).join('') +
-      `</table><p class="petit" style="padding:0 10px 10px">${d.tolerance} oublis tolérés ce mois-ci. Titre-restaurant à partir de ${d.seuilTR} h travaillées dans la journée.</p>`;
+      `</table><p class="petit" style="padding:6px 10px 10px">${d.tolerance} oublis tolérés ce mois-ci. Titre-restaurant à partir de ${d.seuilTR} h travaillées dans la journée.</p>`;
 
     const manq = [];
     d.totaux.forEach(t => t.manquants.forEach(m => manq.push(Object.assign({ nom: t.nom }, m))));
@@ -599,6 +668,7 @@
           <td><button class="mini" onclick="ouvrirJour('${m.date}')">Voir / corriger</button></td></tr>`).join('') +
         '</table></div><p class="petit">Ces journées ne sont pas comptées tant que le pointage manquant n’est pas ajouté.</p>'
       : '';
+    ['t-verif', 't-totaux', 't-manquants'].forEach(id => etiqueter($(id)));
   }
 
   function valider(ligne, bouton) {
