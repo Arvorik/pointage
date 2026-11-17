@@ -80,23 +80,23 @@
     <div class="horloge" id="horloge">--:--</div>
     <div class="date" id="date"></div>
     <div class="msg" id="msg"></div>
-    <button class="gros arrivee" data-type="Arrivée">🐄 C’est parti, les vaches m’attendent !</button>
+    <button class="gros arrivee" data-type="Arrivée">🐄 Je commence mon travail à la ferme</button>
     <div class="pause-ligne"><div class="pl-titre">☕ Pause du matin</div><div class="duo">
-      <button class="gros pause" data-type="Début pause matin">☕ Pause café</button>
-      <button class="gros pause2" data-type="Fin pause matin">💪 Au boulot !</button>
+      <button class="gros pause" data-type="Début pause matin">☕ Début pause du matin</button>
+      <button class="gros pause2" data-type="Fin pause matin">💪 Fin pause du matin</button>
     </div></div>
-    <div class="pause-ligne"><div class="pl-titre">🍽️ Pause de midi</div><div class="duo">
-      <button class="gros pause" data-type="Début pause midi">🍽️ À la soupe !</button>
-      <button class="gros pause2" data-type="Fin pause midi">🚜 On repart !</button>
+    <div class="pause-ligne"><div class="pl-titre">🍽️ Repas du midi</div><div class="duo">
+      <button class="gros pause" data-type="Début pause midi">🍽️ Début repas du midi</button>
+      <button class="gros pause2" data-type="Fin pause midi">🚜 Fin repas du midi</button>
     </div></div>
     <div class="pause-ligne"><div class="pl-titre">☕ Pause de l’après-midi</div><div class="duo">
-      <button class="gros pause" data-type="Début pause après-midi">🥐 Petite pause</button>
-      <button class="gros pause2" data-type="Fin pause après-midi">💪 Je reprends</button>
+      <button class="gros pause" data-type="Début pause après-midi">🥐 Début pause de l’après-midi</button>
+      <button class="gros pause2" data-type="Fin pause après-midi">💪 Fin pause de l’après-midi</button>
     </div></div>
-    <button class="gros depart" data-type="Départ">🏠 À demain la team !</button>
+    <button class="gros depart" data-type="Départ">🏠 J’ai fini, je rentre chez moi</button>
     <div class="pause-ligne" id="bloc-nuit" style="display:none"><div class="pl-titre">🌙 Alarme robot de nuit</div><div class="duo">
-      <button class="gros nuit" data-type="Début alarme nuit">🚨 Le robot m’appelle</button>
-      <button class="gros nuit2" data-type="Fin alarme nuit">😴 Retour au lit</button>
+      <button class="gros nuit" data-type="Début alarme nuit">🚨 Début alarme de nuit</button>
+      <button class="gros nuit2" data-type="Fin alarme nuit">😴 Fin alarme de nuit</button>
     </div></div>
     <div class="jour"><h2>Aujourd’hui</h2><ul id="liste"><li>Rien de pointé pour l’instant</li></ul></div>
     <button class="lien" id="b-oubli">J’ai oublié de pointer</button>
@@ -112,7 +112,7 @@
     <h1>J’ai oublié de pointer</h1>
     <label for="o-type">Ce que j’ai oublié</label>
     <select id="o-type">
-      <option>Arrivée</option><option>Début pause matin</option><option>Fin pause matin</option><option>Début pause midi</option><option>Fin pause midi</option><option>Début pause après-midi</option><option>Fin pause après-midi</option><option>Départ</option>
+      <option value="Arrivée">Je commence mon travail (arrivée)</option><option value="Début pause matin">Début pause du matin</option><option value="Fin pause matin">Fin pause du matin</option><option value="Début pause midi">Début repas du midi</option><option value="Fin pause midi">Fin repas du midi</option><option value="Début pause après-midi">Début pause de l’après-midi</option><option value="Fin pause après-midi">Fin pause de l’après-midi</option><option value="Départ">J’ai fini, je rentre chez moi (départ)</option>
     </select>
     <label for="o-date">Date</label>
     <input type="date" id="o-date">
@@ -304,7 +304,7 @@
     const sel = document.getElementById('o-type');
     ['Début alarme nuit', 'Fin alarme nuit'].forEach(t => {
       const o = Array.from(sel.options).find(x => x.value === t);
-      if (oui && !o) { const n = document.createElement('option'); n.textContent = t; sel.insertBefore(n, sel.lastElementChild); }
+      if (oui && !o) { const n = document.createElement('option'); n.value = t; n.textContent = t.replace('alarme nuit', 'alarme de nuit'); sel.insertBefore(n, sel.lastElementChild); }
       if (!oui && o) o.remove();
     });
   }
